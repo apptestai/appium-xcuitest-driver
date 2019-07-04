@@ -3,8 +3,8 @@ import chaiAsPromised from 'chai-as-promised';
 import _ from 'lodash';
 import { initSession, deleteSession, MOCHA_TIMEOUT } from '../helpers/session';
 import { SAFARI_CAPS } from '../desired';
-import { spinTitleEquals, GUINEA_PIG_PAGE, GUINEA_PIG_SCROLLABLE_PAGE,
-         GUINEA_PIG_APP_BANNER_PAGE } from './helpers';
+import { openPage, spinTitleEquals, spinTitle, GUINEA_PIG_PAGE,
+         GUINEA_PIG_SCROLLABLE_PAGE, GUINEA_PIG_APP_BANNER_PAGE } from './helpers';
 import { killAllSimulators } from '../helpers/simulator';
 import { retryInterval } from 'asyncbox';
 import B from 'bluebird';
@@ -32,31 +32,43 @@ const caps = _.defaults({
   nativeWebTap: true,
 }, SAFARI_CAPS);
 
-const SPIN_RETRIES = 5;
+const SPIN_RETRIES = 25;
 
 const PAGE_3_LINK = 'i am a link to page 3';
 const PAGE_3_TITLE = 'Another Page: page 3';
 
-describe('Safari', function () {
+describe('Safari - coordinate conversion -', function () {
   this.timeout(MOCHA_TIMEOUT * 2);
 
   let devices = [];
   before(async function () {
     await killAllSimulators();
 
-    if (process.env.ALL_DEVICES) {
+    if (process.env.REAL_DEVICE) {
+      // on real device, just test again the current device
+      devices = [caps.deviceName];
+    } else if (process.env.ALL_DEVICES) {
       // get all the iPhone and iPad devices available
       devices = await getDeviceTypes();
       devices = devices.filter((device) => device.includes('iPhone') || device.includes('iPad'));
     } else if (process.env.DEVICE_NAME) {
       devices = [process.env.DEVICE_NAME];
     } else {
+      // default to a relatively representative set of devices
       devices = ['iPad Simulator', 'iPhone 6', 'iPhone X'];
+    }
+
+    async function loadPage (driver, url) {
+      await retryInterval(5, 1000, async function () {
+        await openPage(driver, url);
+        const title = await spinTitle(driver);
+        title.should.not.include('Cannot Open Page');
+      });
     }
 
     // define the tests, for each device
     for (const deviceName of devices) {
-      describe(`coordinate conversion - ${deviceName} -`, function () {
+      describe(`${deviceName} -`, function () {
         this.timeout(MOCHA_TIMEOUT * 2);
 
         let driver;
@@ -84,7 +96,7 @@ describe('Safari', function () {
         });
 
         it('should be able to tap on an element', async function () {
-          await driver.get(GUINEA_PIG_PAGE);
+          await loadPage(driver, GUINEA_PIG_PAGE);
 
           let el = await driver.elementByLinkText(PAGE_3_LINK);
           await el.click();
@@ -93,7 +105,7 @@ describe('Safari', function () {
         });
 
         it('should be able to tap on an element when the app banner is up', async function () {
-          await driver.get(GUINEA_PIG_APP_BANNER_PAGE);
+          await loadPage(driver, GUINEA_PIG_APP_BANNER_PAGE);
 
           let el = await driver.elementByLinkText(PAGE_3_LINK);
           await el.click();
@@ -102,7 +114,7 @@ describe('Safari', function () {
         });
 
         it('should be able to tap on an element after scrolling', async function () {
-          await driver.get(GUINEA_PIG_SCROLLABLE_PAGE);
+          await loadPage(driver, GUINEA_PIG_SCROLLABLE_PAGE);
           await driver.execute('mobile: scroll', {direction: 'down'});
 
           let el = await driver.elementByLinkText(PAGE_3_LINK);
@@ -112,39 +124,43 @@ describe('Safari', function () {
         });
 
         it('should be able to tap on a button', async function () {
-          await driver.get(GUINEA_PIG_PAGE);
+          this.retries(5);
+
+          await loadPage(driver, GUINEA_PIG_PAGE);
 
           (await driver.source()).should.not.include('Your comments: Hello');
 
           let textArea = await driver.elementByName('comments');
           await textArea.type('Hello');
 
-          // console.log(await driver.source());
           let el = await driver.elementByName('submit');
           await el.click();
 
           await retryInterval(5, 500, async function () {
-            (await driver.source()).should.include('Your comments: Hello');
+            const src = await driver.source();
+            return src.should.include('Your comments: Hello');
           });
         });
 
         describe('with tabs -', function () {
-          beforeEach(async function () {
-            await driver.get(GUINEA_PIG_PAGE);
-          });
           before(async function () {
-            if (skipped) {
+            if (skipped || !deviceName.toLowerCase().includes('ipad')) {
               return this.skip();
             }
-            await driver.get(GUINEA_PIG_PAGE);
+            await loadPage(driver, GUINEA_PIG_PAGE);
 
             // open a new tab and go to it
-            let el = await driver.elementByLinkText('i am a new window link');
+            const el = await driver.elementByLinkText('i am a new window link');
             await el.click();
+
+            await retryInterval(10, 1000, async function () {
+              const title = await driver.title();
+              title.should.eql('I am another page title');
+            });
           });
 
           it('should be able to tap on an element', async function () {
-            await driver.get(GUINEA_PIG_PAGE);
+            await loadPage(driver, GUINEA_PIG_PAGE);
 
             let el = await driver.elementByLinkText(PAGE_3_LINK);
             await el.click();
@@ -160,7 +176,7 @@ describe('Safari', function () {
             await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
           });
           it('should be able to tap on an element after scrolling', async function () {
-            await driver.get(GUINEA_PIG_SCROLLABLE_PAGE);
+            await loadPage(driver, GUINEA_PIG_SCROLLABLE_PAGE);
             await driver.execute('mobile: scroll', {direction: 'down'});
 
             let el = await driver.elementByLinkText(PAGE_3_LINK);
@@ -169,7 +185,7 @@ describe('Safari', function () {
             await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
           });
           it('should be able to tap on an element after scrolling, when the url bar is present', async function () {
-            await driver.get(GUINEA_PIG_SCROLLABLE_PAGE);
+            await loadPage(driver, GUINEA_PIG_SCROLLABLE_PAGE);
             await driver.execute('mobile: scroll', {direction: 'down'});
 
             // to get the url bar, click on the URL bar

@@ -15,14 +15,15 @@ const SIM_DEVICE_NAME = 'xcuitestDriverTest';
 const should = chai.should();
 chai.use(chaiAsPromised);
 
-const getNumSims = async () => {
+async function getNumSims () {
   return (await getDevices())[UICATALOG_SIM_CAPS.platformVersion].length;
-};
-const deleteDeviceWithRetry = async function (udid) {
+}
+
+async function deleteDeviceWithRetry (udid) {
   try {
     await retryInterval(10, 1000, deleteDevice, udid);
   } catch (ign) {}
-};
+}
 
 describe('XCUITestDriver', function () {
   this.timeout(MOCHA_TIMEOUT);
@@ -35,7 +36,10 @@ describe('XCUITestDriver', function () {
     const udid = await createDevice(SIM_DEVICE_NAME,
       UICATALOG_SIM_CAPS.deviceName, UICATALOG_SIM_CAPS.platformVersion);
     baseCaps = Object.assign({}, UICATALOG_SIM_CAPS, {udid});
-    caps = Object.assign({usePrebuiltWDA: true}, baseCaps);
+    caps = Object.assign({
+      usePrebuiltWDA: true,
+      wdaStartupRetries: 0,
+    }, baseCaps);
   });
   after(async function () {
     const sim = await getSimulator(caps.udid);
@@ -52,19 +56,19 @@ describe('XCUITestDriver', function () {
   if (!process.env.REAL_DEVICE) {
     it('should start and stop a session', async function () {
       driver = await initSession(baseCaps);
-      let els = await driver.elementsByClassName("XCUIElementTypeWindow");
+      let els = await driver.elementsByClassName('XCUIElementTypeWindow');
       els.length.should.be.at.least(1);
     });
 
     it('should start and stop a session doing pre-build', async function () {
       driver = await initSession(Object.assign({prebuildWDA: true}, baseCaps));
-      let els = await driver.elementsByClassName("XCUIElementTypeWindow");
+      let els = await driver.elementsByClassName('XCUIElementTypeWindow');
       els.length.should.be.at.least(1);
     });
 
     it('should start and stop a session doing simple build-test', async function () {
       driver = await initSession(Object.assign({useSimpleBuildTest: true}, baseCaps));
-      let els = await driver.elementsByClassName("XCUIElementTypeWindow");
+      let els = await driver.elementsByClassName('XCUIElementTypeWindow');
       els.length.should.be.at.least(1);
     });
 
@@ -95,6 +99,8 @@ describe('XCUITestDriver', function () {
     });
 
     describe('WebdriverAgent port', function () {
+      this.retries(3);
+
       it('should run on default port if no other specified', async function () {
         let localCaps = Object.assign({}, baseCaps, {
           fullReset: true,
@@ -129,7 +135,7 @@ describe('XCUITestDriver', function () {
         orientation.should.eql(initialOrientation);
       }
 
-      for (let orientation of ['LANDSCAPE', 'PORTRAIT']) {
+      for (const orientation of ['LANDSCAPE', 'PORTRAIT']) {
         it(`should be able to start in a ${orientation} mode`, async function () {
           this.timeout(MOCHA_TIMEOUT);
           await runOrientationTest(orientation);
@@ -144,17 +150,16 @@ describe('XCUITestDriver', function () {
         });
       });
 
-      it.skip('default: creates sim and deletes it afterwards', async function () {
-        let caps = UICATALOG_SIM_CAPS;
+      it('default: creates sim and deletes it afterwards', async function () {
+        const caps = Object.assign({}, UICATALOG_SIM_CAPS, {enforceFreshSimulatorCreation: true});
 
-        await killAllSimulators();
-        let simsBefore = await getNumSims();
+        const simsBefore = await getNumSims();
         await initSession(caps);
 
-        let simsDuring = await getNumSims();
+        const simsDuring = await getNumSims();
 
         await deleteSession();
-        let simsAfter = await getNumSims();
+        const simsAfter = await getNumSims();
 
         simsDuring.should.equal(simsBefore + 1);
         simsAfter.should.equal(simsBefore);

@@ -12,7 +12,12 @@ import { MOCHA_LONG_TIMEOUT } from './helpers';
 chai.should();
 const expect = chai.expect;
 
-const caps = {platformName: "iOS", deviceName: "iPhone 6", app: "/foo.app"};
+const caps = {
+  platformName: 'iOS',
+  deviceName: 'iPhone 6',
+  app: '/foo.app',
+  platformVersion: '10.0',
+};
 
 describe('driver commands', function () {
   describe('status', function () {
@@ -94,6 +99,23 @@ describe('driver commands', function () {
       this.timeout(MOCHA_LONG_TIMEOUT);
       const resCaps = await driver.createSession(caps);
       resCaps[1].javascriptEnabled.should.be.true;
+    });
+
+    it('should call startLogCapture', async function () {
+      const c = { ... caps };
+      Object.assign(c, {skipLogCapture: false});
+      this.timeout(MOCHA_LONG_TIMEOUT);
+      const resCaps = await driver.createSession(c);
+      resCaps[1].javascriptEnabled.should.be.true;
+      driver.startLogCapture.called.should.be.true;
+    });
+    it('should not call startLogCapture', async function () {
+      const c = { ... caps };
+      Object.assign(c, {skipLogCapture: true});
+      this.timeout(MOCHA_LONG_TIMEOUT);
+      const resCaps = await driver.createSession(c);
+      resCaps[1].javascriptEnabled.should.be.true;
+      driver.startLogCapture.called.should.be.false;
     });
   });
 

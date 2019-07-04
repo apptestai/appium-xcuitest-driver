@@ -1,11 +1,11 @@
-import { clearSystemFiles, translateDeviceName, adjustWDAAttachmentsPermissions,
-         markSystemFilesForCleanup } from '../../lib/utils';
+import {
+  clearSystemFiles, translateDeviceName,
+  markSystemFilesForCleanup, isLocalHost } from '../../lib/utils';
 import chai from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import { withMocks } from 'appium-test-support';
 import { utils as iosUtils } from 'appium-ios-driver';
 import { fs } from 'appium-support';
-import B from 'bluebird';
 
 
 chai.should();
@@ -64,79 +64,14 @@ describe('utils', function () {
       await clearSystemFiles(wda);
     });
   }));
-  describe('adjustWDAAttachmentsPermissions', withMocks({fs}, function (mocks) {
-    afterEach(function () {
-      mocks.verify();
-    });
 
-    it('should change permissions to Attachments folder', async function () {
-      let wda = {
-        retrieveDerivedDataPath () {
-          return DERIVED_DATA_ROOT;
-        }
-      };
-      mocks.fs.expects('exists')
-        .once()
-        .withExactArgs(`${DERIVED_DATA_ROOT}/Logs/Test/Attachments`)
-        .returns(true);
-      mocks.fs.expects('chmod')
-        .once()
-        .withExactArgs(`${DERIVED_DATA_ROOT}/Logs/Test/Attachments`, '555')
-        .returns();
-      await adjustWDAAttachmentsPermissions(wda, '555');
-    });
-    it('should not repeat permissions change with equal flags for the particular folder', async function () {
-      let wda = {
-        retrieveDerivedDataPath () {
-          return DERIVED_DATA_ROOT;
-        }
-      };
-      mocks.fs.expects('exists')
-        .atLeast(2)
-        .withExactArgs(`${DERIVED_DATA_ROOT}/Logs/Test/Attachments`)
-        .returns(true);
-      mocks.fs.expects('chmod')
-        .twice()
-        .returns();
-      await adjustWDAAttachmentsPermissions(wda, '333');
-      await adjustWDAAttachmentsPermissions(wda, '333');
-      await adjustWDAAttachmentsPermissions(wda, '444');
-      await adjustWDAAttachmentsPermissions(wda, '444');
-    });
-    it('should not repeat permissions change with equal flags for the particular folder in parallel sessions', async function () {
-      let wda = {
-        retrieveDerivedDataPath () {
-          return DERIVED_DATA_ROOT;
-        }
-      };
-      mocks.fs.expects('exists')
-        .atLeast(2)
-        .withExactArgs(`${DERIVED_DATA_ROOT}/Logs/Test/Attachments`)
-        .returns(true);
-      mocks.fs.expects('chmod')
-        .twice()
-        .returns();
-      await B.map([[wda, '123'], [wda, '123']], ([w, perms]) => adjustWDAAttachmentsPermissions(w, perms));
-      await B.map([[wda, '234'], [wda, '234']], ([w, perms]) => adjustWDAAttachmentsPermissions(w, perms));
-    });
-    it('should do nothing if no derived data path is found', async function () {
-      let wda = {
-        retrieveDerivedDataPath () {
-          return null;
-        }
-      };
-      mocks.fs.expects('exists').never();
-      mocks.fs.expects('chmod').never();
-      await adjustWDAAttachmentsPermissions(wda, '777');
-    });
-  }));
   describe('determineDevice', function () {
     it('should set the correct iPad simulator generic device', function () {
       const ipadDeviceName = 'iPad Simulator';
       let deviceName = translateDeviceName('10.1.2', ipadDeviceName);
       deviceName.should.equal('iPad Retina');
       deviceName = translateDeviceName(10.103, ipadDeviceName);
-      deviceName.should.equal("iPad Retina");
+      deviceName.should.equal('iPad Air');
       deviceName = translateDeviceName('10.3', ipadDeviceName);
       deviceName.should.equal('iPad Air');
       deviceName = translateDeviceName(10.3, ipadDeviceName);
@@ -145,6 +80,42 @@ describe('utils', function () {
     it('should set the correct iPhone simulator generic device', function () {
       let deviceName = translateDeviceName(10.3, 'iPhone Simulator');
       deviceName.should.equal('iPhone 6');
+    });
+  });
+
+  describe('isLocalHost', function () {
+    it('should be false with invalid input, undefined', function () {
+      isLocalHost(undefined).should.be.false;
+    });
+    it('should be false with invalid input, empty', function () {
+      isLocalHost('').should.be.false;
+    });
+    it('should be true with ipv4 localhost', function () {
+      isLocalHost('http://localhost').should.be.true;
+    });
+    it('should be true with ipv4 localhost with port', function () {
+      isLocalHost('http://localhost:8888').should.be.true;
+    });
+    it('should be true with ipv4 127.0.0.1', function () {
+      isLocalHost('http://127.0.0.1').should.be.true;
+    });
+    it('should be true with ipv6 ::1', function () {
+      isLocalHost('http://[::1]').should.be.true;
+    });
+    it('should be true with ipv6 ::ffff:127.0.0.1', function () {
+      isLocalHost('http://[::ffff:127.0.0.1]').should.be.true;
+    });
+    it('should be true with ipv6 ::ffff:127.0.0.1 with port', function () {
+      isLocalHost('http://[::ffff:127.0.0.1]:8888').should.be.true;
+    });
+    it('should be false with ipv4 192.168.1.100', function () {
+      isLocalHost('http://192.168.1.100').should.be.false;
+    });
+    it('should be false with ipv4 192.168.1.100 with port', function () {
+      isLocalHost('http://192.168.1.100:8888').should.be.false;
+    });
+    it('should be false with ipv6 2001:db8:85a3:8d3:1319:8a2e:370:7348', function () {
+      isLocalHost('http://[2001:db8:85a3:8d3:1319:8a2e:370:7348]').should.be.false;
     });
   });
 });

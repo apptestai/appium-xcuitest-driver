@@ -145,7 +145,8 @@ describe('XCUITestDriver - gestures', function () {
     });
     it('should double tap on an element', async function () {
       // FIXME: Multitouch does not work as expected in Xcode < 9.
-      if ((await xcode.getVersion(true)).major < 9) {
+      // cloud tests are run on Linux, so no Xcode version to check
+      if (!process.env.CLOUD && (await xcode.getVersion(true)).major < 9) {
         return this.skip();
       }
 
@@ -234,7 +235,7 @@ describe('XCUITestDriver - gestures', function () {
           .should.eventually.be.rejectedWith(/An element could not be located/);
 
         let x, y0, y1;
-        const window = await driver.elementByClassName('XCUIElementTypeWindow');
+        const window = await driver.elementByClassName('XCUIElementTypeApplication');
         const {width, height} = await window.getSize();
         try {
           // Try locating the 'Cellular' element (which can be pulled down)
@@ -273,7 +274,7 @@ describe('XCUITestDriver - gestures', function () {
       let el1 = await driver.elementByAccessibilityId('Action Sheets');
       let action = new wd.TouchAction(driver);
       action.tap({el: el1});
-      action.perform();
+      await action.perform();
 
       // pause a moment so the alert can animate
       await B.delay(500);
