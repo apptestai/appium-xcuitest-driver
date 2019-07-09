@@ -1,6 +1,4 @@
 [submodule "WebDriverAgent"]
 	path = WebDriverAgent
-	url = https://github.com/appium/WebDriverAgent.git 
+	url = https://github.com/apptestai/WebDriverAgent.git 
 	branch = apptestai_v0.4.0
-[submodule]
-	WebDriverAgent = https://github.com/apptestai/WebDriverAgent.git
