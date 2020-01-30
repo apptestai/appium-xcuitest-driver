@@ -120,7 +120,7 @@ async function initSession (caps) {
     await initServer();
   }
 
-  if (process.env.CLOUD) {
+  if (CLOUD) {
     // on cloud tests, we want to set the `name` capability
     if (!caps.name) {
       caps.name = process.env.SAUCE_JOB_NAME || process.env.TRAVIS_JOB_NUMBER || 'unnamed';
@@ -137,12 +137,10 @@ async function initSession (caps) {
     }, caps);
   }
 
-  let serverRes = await driver.init(caps);
+  const serverRes = await driver.init(caps);
   if (!caps.udid && !caps.fullReset && serverRes[1].udid) {
     caps.udid = serverRes[1].udid;
   }
-
-  await driver.setImplicitWaitTimeout(process.env.CI ? 30000 : 5000);
 
   return driver;
 }

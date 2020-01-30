@@ -9,7 +9,7 @@ import { killAllSimulators } from '../helpers/simulator';
 import { retryInterval } from 'asyncbox';
 import B from 'bluebird';
 import { getDeviceTypes } from 'node-simctl';
-
+import { util } from 'appium-support';
 
 /**
  * This test suite can be affected by two environment variables:
@@ -45,8 +45,7 @@ describe('Safari - coordinate conversion -', function () {
     await killAllSimulators();
 
     if (process.env.REAL_DEVICE) {
-      // on real device, just test again the current device
-      devices = [caps.deviceName];
+      // skip, by not having any devices in the list
     } else if (process.env.ALL_DEVICES) {
       // get all the iPhone and iPad devices available
       devices = await getDeviceTypes();
@@ -55,7 +54,11 @@ describe('Safari - coordinate conversion -', function () {
       devices = [process.env.DEVICE_NAME];
     } else {
       // default to a relatively representative set of devices
-      devices = ['iPad Simulator', 'iPhone 6', 'iPhone X'];
+      devices = ['iPhone 6', 'iPad Simulator'];
+      if (!process.env.TRAVIS || util.compareVersions(caps.platformVersion, '<', '13.0')) {
+        // TODO: see when Travis can launch iPhone X sims
+        devices.push('iPhone X');
+      }
     }
 
     async function loadPage (driver, url) {
@@ -72,22 +75,26 @@ describe('Safari - coordinate conversion -', function () {
         this.timeout(MOCHA_TIMEOUT * 2);
 
         let driver;
+        const localCaps = _.defaults({
+          deviceName,
+          fullReset: true,
+          noReset: false,
+        }, caps);
         let skipped = false;
 
         before(async function () {
           skipped = false;
           try {
-            driver = await initSession(_.defaults({
-              deviceName,
-              fullReset: true,
-              noReset: false,
-            }, caps));
+            driver = await initSession(localCaps);
           } catch (err) {
             if (err.message.includes('Invalid device type') || err.message.includes('Incompatible device')) {
               skipped = true;
               return this.skip();
             }
             throw err;
+          }
+          if (process.env.CI) {
+            await driver.setImplicitWaitTimeout(10000);
           }
         });
         after(async function () {
