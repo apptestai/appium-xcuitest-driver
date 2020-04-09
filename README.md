@@ -7,7 +7,7 @@
 
 [![Build Status](https://api.travis-ci.org/appium/appium-xcuitest-driver.png?branch=master)](https://travis-ci.org/appium/appium-xcuitest-driver)
 [![Coverage Status](https://coveralls.io/repos/appium/appium-xcuitest-driver/badge.svg?branch=master)](https://coveralls.io/r/appium/appium-xcuitest-driver?branch=master)
-[![Greenkeeper badge](https://badges.greenkeeper.io/appium/appium-xcuitest-driver.svg)](https://greenkeeper.io/)
+[![Coverage Status](https://coveralls.io/repos/appium/appium-xcuitest-driver/badge.svg?branch=master)](https://coveralls.io/r/appium/appium-xcuitest-driver?branch=master)
 
 *Note*: Issue tracking for this repo has been disabled. Please use the [main Appium issue tracker](https://github.com/appium/appium/issues) instead.
 
@@ -141,14 +141,16 @@ Differences are noted here:
 |`calendarAccessAuthorized`|Set this to `true` if you want to enable calendar access on IOS Simulator with given bundleId. Set to `false`, if you want to disable calendar access on IOS Simulator with given bundleId. If not set, the calendar authorization status will not be set.|e.g., `true`|
 |`isHeadless`|Set this capability to `true` if automated tests are running on Simulator and the device display is not needed to be visible. This only has an effect since Xcode9 and only for simulators. All running instances of Simulator UI are going to be automatically terminated if headless test is started. `false` is the default value.|e.g., `true`|
 |`simulatorWindowCenter`|Allows to explicitly set the coordinates of Simulator window center for Xcode9+ SDK. This capability only has an effect if Simulator window has not been opened yet for the current session before it started.|e.g. `{-100.0,100.0}` or `{500,500}`, spaces are not allowed|
+|`simulatorStartupTimeout`|Allows to change the default timeout for Simulator startup. By default this value is set to 120000ms (2 minutes), although the startup could take longer on a weak hardware or if other concurrent processes use much system resources during the boot up procedure.|e.g. `300000`|
+|`simulatorTracePointer`|Whether to highlight pointer moves in the Simulator window. The Simulator UI client must be shut down before the session startup in order for this capability to be applied properly. `false` by default.|e.g. `true`|
 |`shutdownOtherSimulators`|If this capability set to `true` and the current device under test is an iOS Simulator then Appium will try to shutdown all the other running Simulators before to start a new session. This might be useful while executing webview tests on different devices, since only one device can be debugged remotely at once due to an Apple bug. The capability only has an effect if `--relaxed-security` command line argument is provided to the server. Defaults to `false`.|e.g. `true`|
 | `enforceFreshSimulatorCreation`| Creates a new simulator in session creation and deletes it in session deletion. Defaults to `false`. | `true` or `false` |
 |`keepKeyChains`|Set the capability to `true` in order to preserve Simulator keychains folder after full reset. This feature has no effect on real devices. Defaults to `false`|e.g. `true`|
 |`keychainsExcludePatterns`|This capability accepts comma-separated path patterns, which are going to be excluded from keychains restore while full reset is being performed on Simulator. It might be useful if you want to exclude only particular keychain types from being restored, like the applications keychain. This feature has no effect on real devices.|e.g. `*keychain*.db*` to exclude applications keychain from being restored|
 |`reduceMotion`| It allows to turn on/off reduce motion accessibility preference. Setting reduceMotion `on` helps to reduce flakiness during tests. Only on simulators | e.g `true` |
-|`permissions`| Allows to set permissions for the specified application bundle on Simulator only. The capability value is expected to be a valid JSON string with `{"<bundleId1>": {"<serviceName1>": "<serviceStatus1>", ...}, ...}` format. It is required that `applesimutils` package is installed and available in PATH. The list of available service names and statuses can be found at https://github.com/wix/AppleSimulatorUtils. | e. g. `{"com.apple.mobilecal": {"calendar": "YES"}}` |
+|`permissions`| Allows to set permissions for the specified application bundle on Simulator only. The capability value is expected to be a valid JSON string with `{"<bundleId1>": {"<serviceName1>": "<serviceStatus1>", ...}, ...}` format. Since Xcode SDK 11.4 Apple provides native APIs to interact with application settings. Check the output of `xcrun simctl privacy booted` command to get the list of available permission names. Use `yes`, `no` and `unset` as values in order to `grant`, `revoke` or `reset` the corresponding permission. Below Xcode SDK 11.4 it is required that `applesimutils` package is installed and available in PATH. The list of available service names and statuses can be found at https://github.com/wix/AppleSimulatorUtils. | e. g. `{"com.apple.mobilecal": {"calendar": "YES"}}` |
 |`iosSimulatorLogsPredicate`|Set the `--predicate` flag in the ios simulator logs|e.g.: `'process != "locationd" AND process != "DTServiceHub"' AND process != "mobileassetd"`|
-
+|`simulatorPasteboardAutomaticSync`| Handle the `-PasteboardAutomaticSync` flag when simulator process launches. It could improve launching simulator performance not to sync pasteboard with the system when this value is `off`. `on` forces the flag enabled. `system` does not provide the flag to the launching command. `on`, `off`, or `system` is available. They are case insensitive. Defaults to `off` | e.g. `system` |
 
 ### General capabilities:
 
@@ -171,6 +173,7 @@ Differences are noted here:
 |`safariLogAllCommunicationHexDump`|Log all communication sent to and received from the Web Inspector, as raw hex dump and printable characters. This logging is done _before_ any data manipulation, and so can elucidate some communication issues. Like `safariLogAllCommunication`, this can produce a lot of data in some cases, so it is recommended to be used only when necessary. Defaults to `false`.|`true` or `false`|
 |`safariSocketChunkSize`|The size, in _bytes_, of the data to be sent to the Web Inspector on iOS 11+ real devices. Some devices hang when sending large amounts of data to the Web Inspector, and breaking them into smaller parts can be helpful in those cases. Defaults to `16384` (also the maximum possible)|e.g., `1000`|
 |`additionalWebviewBundleIds`|Array (or JSON array) of possible bundle identifiers for webviews. This is sometimes necessary if the Web Inspector is found to be returning a modified bundle identifier for the app. Defaults to `[]`|e.g., `['io.appium.modifiedId', 'ABCDEF']`|
+|`webviewConnectTimeout`|The time to wait, in `ms`, for the initial presence of webviews in MobileSafari or hybrid apps. Defaults to `0`|e.g., '5000'|
 
 ## Opt-in Features (With Security Risk)
 

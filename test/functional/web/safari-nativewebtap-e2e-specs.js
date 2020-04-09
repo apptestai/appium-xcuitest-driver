@@ -3,12 +3,13 @@ import chaiAsPromised from 'chai-as-promised';
 import _ from 'lodash';
 import { initSession, deleteSession, MOCHA_TIMEOUT } from '../helpers/session';
 import { SAFARI_CAPS } from '../desired';
-import { openPage, spinTitleEquals, spinTitle, GUINEA_PIG_PAGE,
-         GUINEA_PIG_SCROLLABLE_PAGE, GUINEA_PIG_APP_BANNER_PAGE } from './helpers';
-import { killAllSimulators } from '../helpers/simulator';
+import {
+  openPage, spinTitleEquals, spinTitle, GUINEA_PIG_PAGE,
+  GUINEA_PIG_SCROLLABLE_PAGE, GUINEA_PIG_APP_BANNER_PAGE
+} from './helpers';
 import { retryInterval } from 'asyncbox';
 import B from 'bluebird';
-import { getDeviceTypes } from 'node-simctl';
+import Simctl from 'node-simctl';
 import { util } from 'appium-support';
 
 /**
@@ -42,13 +43,11 @@ describe('Safari - coordinate conversion -', function () {
 
   let devices = [];
   before(async function () {
-    await killAllSimulators();
-
     if (process.env.REAL_DEVICE) {
       // skip, by not having any devices in the list
     } else if (process.env.ALL_DEVICES) {
       // get all the iPhone and iPad devices available
-      devices = await getDeviceTypes();
+      devices = await new Simctl().getDeviceTypes();
       devices = devices.filter((device) => device.includes('iPhone') || device.includes('iPad'));
     } else if (process.env.DEVICE_NAME) {
       devices = [process.env.DEVICE_NAME];
@@ -64,8 +63,7 @@ describe('Safari - coordinate conversion -', function () {
     async function loadPage (driver, url) {
       await retryInterval(5, 1000, async function () {
         await openPage(driver, url);
-        const title = await spinTitle(driver);
-        title.should.not.include('Cannot Open Page');
+        await spinTitle(driver).should.eventually.not.include('Cannot Open Page');
       });
     }
 
@@ -77,8 +75,6 @@ describe('Safari - coordinate conversion -', function () {
         let driver;
         const localCaps = _.defaults({
           deviceName,
-          fullReset: true,
-          noReset: false,
         }, caps);
         let skipped = false;
 
@@ -99,14 +95,12 @@ describe('Safari - coordinate conversion -', function () {
         });
         after(async function () {
           await deleteSession();
-          await killAllSimulators();
         });
 
         it('should be able to tap on an element', async function () {
           await loadPage(driver, GUINEA_PIG_PAGE);
 
-          let el = await driver.elementByLinkText(PAGE_3_LINK);
-          await el.click();
+          await driver.elementByLinkText(PAGE_3_LINK).click();
 
           await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
         });
@@ -114,8 +108,7 @@ describe('Safari - coordinate conversion -', function () {
         it('should be able to tap on an element when the app banner is up', async function () {
           await loadPage(driver, GUINEA_PIG_APP_BANNER_PAGE);
 
-          let el = await driver.elementByLinkText(PAGE_3_LINK);
-          await el.click();
+          await driver.elementByLinkText(PAGE_3_LINK).click();
 
           await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
         });
@@ -124,8 +117,7 @@ describe('Safari - coordinate conversion -', function () {
           await loadPage(driver, GUINEA_PIG_SCROLLABLE_PAGE);
           await driver.execute('mobile: scroll', {direction: 'down'});
 
-          let el = await driver.elementByLinkText(PAGE_3_LINK);
-          await el.click();
+          await driver.elementByLinkText(PAGE_3_LINK).click();
 
           await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
         });
@@ -137,16 +129,22 @@ describe('Safari - coordinate conversion -', function () {
 
           (await driver.source()).should.not.include('Your comments: Hello');
 
-          let textArea = await driver.elementByName('comments');
-          await textArea.type('Hello');
+          await driver.elementByName('comments').type('Hello');
 
-          let el = await driver.elementByName('submit');
-          await el.click();
+          await driver.elementByName('submit').click();
 
           await retryInterval(5, 500, async function () {
             const src = await driver.source();
             return src.should.include('Your comments: Hello');
           });
+        });
+
+        it('should be able to handle an alert', async function () {
+          await loadPage(driver, GUINEA_PIG_PAGE);
+
+          await driver.elementById('alert1').click();
+          await retryInterval(5, 1000, driver.acceptAlert.bind(driver));
+          await driver.title().should.eventually.include('I am a page title');
         });
 
         describe('with tabs -', function () {
@@ -157,28 +155,24 @@ describe('Safari - coordinate conversion -', function () {
             await loadPage(driver, GUINEA_PIG_PAGE);
 
             // open a new tab and go to it
-            const el = await driver.elementByLinkText('i am a new window link');
-            await el.click();
+            await driver.elementByLinkText('i am a new window link').click();
 
             await retryInterval(10, 1000, async function () {
-              const title = await driver.title();
-              title.should.eql('I am another page title');
+              await driver.title().should.eventually.eql('I am another page title');
             });
           });
 
           it('should be able to tap on an element', async function () {
             await loadPage(driver, GUINEA_PIG_PAGE);
 
-            let el = await driver.elementByLinkText(PAGE_3_LINK);
-            await el.click();
+            await driver.elementByLinkText(PAGE_3_LINK).click();
 
             await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
 
             await driver.back();
 
             // try again, just to make sure
-            el = await driver.elementByLinkText(PAGE_3_LINK);
-            await el.click();
+            await driver.elementByLinkText(PAGE_3_LINK).click();
 
             await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
           });
@@ -186,8 +180,7 @@ describe('Safari - coordinate conversion -', function () {
             await loadPage(driver, GUINEA_PIG_SCROLLABLE_PAGE);
             await driver.execute('mobile: scroll', {direction: 'down'});
 
-            let el = await driver.elementByLinkText(PAGE_3_LINK);
-            await el.click();
+            await driver.elementByLinkText(PAGE_3_LINK).click();
 
             await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
           });
@@ -214,8 +207,7 @@ describe('Safari - coordinate conversion -', function () {
               await driver.context(ctx);
             }
 
-            const el = await driver.elementByLinkText(PAGE_3_LINK);
-            await el.click();
+            await driver.elementByLinkText(PAGE_3_LINK).click();
 
             await spinTitleEquals(driver, PAGE_3_TITLE, SPIN_RETRIES);
           });

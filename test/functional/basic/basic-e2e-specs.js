@@ -256,7 +256,8 @@ describe('XCUITestDriver - basics -', function () {
       size.height.should.be.a('number');
     });
     it('should not be able to get random window size', async function () {
-      await driver.getWindowSize('something-random').should.be.rejectedWith(/Currently only getting current window size is supported/);
+      await driver.getWindowSize('something-random')
+        .should.eventually.be.rejectedWith(/Currently only getting current window size is supported/);
     });
   });
 
@@ -309,7 +310,7 @@ describe('XCUITestDriver - basics -', function () {
 
     it('should start a session, navigate to url, get title', async function () {
       // on some systems (like Travis) it takes a while to load the webview
-      const contexts = await driver.execute('mobile: getContexts', {waitForWebviewMs: 30000});
+      const contexts = await driver.contexts();
 
       await driver.context(contexts[1]);
       await driver.get(GUINEA_PIG_PAGE);

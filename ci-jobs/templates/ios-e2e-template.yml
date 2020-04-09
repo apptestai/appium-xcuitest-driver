@@ -21,7 +21,7 @@ jobs:
       vmImage: 'macOS-10.14'
     steps:
     - checkout: self
-    - script: |
+    - bash: |
         echo "Mocha output file: $MOCHA_FILE"
         echo "Platform Version: $PLATFORM_VERSION"
         echo "Device Name: $DEVICE_NAME"
@@ -34,22 +34,20 @@ jobs:
       displayName: Log Xcode Version
     - script: xcrun simctl list
       displayName: List Installed Simulators
+    - bash: |
+        brew tap facebook/fb
+        brew install idb-companion
+        pip3.7 install fb-idb
+      displayName: Install IDB
+      condition: eq('${{ parameters.launchWithIDB }}', true)
     - task: NodeTool@0
       inputs:
         versionSpec: 10.x
     - script: npm install
       displayName: Install node dependencies
-    - script: npm run build
-      displayName: Build
     - script: ${{ parameters.script }}
       displayName: Run functional tests
     - task: PublishTestResults@2
       condition: always()
       inputs:
         testResultsFiles: $(MOCHA_FILE)
-    - task: PublishCodeCoverageResults@1
-      condition: always()
-      inputs:
-        codeCoverageTool: cobertura
-        summaryFileLocation: coverage/cobertura-coverage.xml
-        reporterDirectory: coverage/
