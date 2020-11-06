@@ -95,6 +95,7 @@ let GENERIC_CAPS = {
   wdaConnectionTimeout: (60 * 1000 * 8),
   useNewWDA: true,
   webviewConnectTimeout: 30000,
+  simulatorStartupTimeout: (1000 * 60 * 4),
 };
 
 if (process.env.CLOUD) {
@@ -171,5 +172,5 @@ let TVOS_CAPS = _.defaults({
 export {
   UICATALOG_CAPS, UICATALOG_SIM_CAPS, SAFARI_CAPS, TESTAPP_CAPS,
   PLATFORM_VERSION, TOUCHIDAPP_CAPS, DEVICE_NAME, W3C_CAPS, SETTINGS_CAPS,
-  TVOS_CAPS, MULTIPLE_APPS
+  TVOS_CAPS, MULTIPLE_APPS, GENERIC_CAPS
 };

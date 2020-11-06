@@ -1,12 +1,13 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/android
 parameters:
-    script: ''
-    name: ios-e2e-test
-    dependsOn: ''
-    iosVersion: 13.0
-    xcodeVersion: 11
-    deviceName: 'iPhone X'
-    skipTvOs: False
+  script: ''
+  name: ios-e2e-test
+  dependsOn: ''
+  iosVersion: 13.3
+  xcodeVersion: 11.3.1
+  deviceName: 'iPhone X'
+  skipTvOs: False
+  vmImage: 'macOS-10.15'
 
 jobs:
   - job: ${{ parameters.name }}
@@ -18,7 +19,7 @@ jobs:
       LAUNCH_WITH_IDB: ${{ parameters.launchWithIDB }}
       CI: true
     pool:
-      vmImage: 'macOS-10.14'
+      vmImage: ${{ parameters.vmImage }}
     steps:
     - checkout: self
     - bash: |
@@ -34,18 +35,21 @@ jobs:
       displayName: Log Xcode Version
     - script: xcrun simctl list
       displayName: List Installed Simulators
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.7'
     - bash: |
         brew tap facebook/fb
         brew install idb-companion
-        pip3.7 install fb-idb
+        python -m pip install --user fb-idb
       displayName: Install IDB
       condition: eq('${{ parameters.launchWithIDB }}', true)
     - task: NodeTool@0
       inputs:
-        versionSpec: 10.x
+        versionSpec: 12.x
     - script: npm install
       displayName: Install node dependencies
-    - script: ${{ parameters.script }}
+    - script: export PATH="${PATH}:$(python -c 'import site; print(site.USER_BASE)')/bin" && ${{ parameters.script }}
       displayName: Run functional tests
     - task: PublishTestResults@2
       condition: always()

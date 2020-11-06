@@ -1,10 +1,21 @@
 # Pull request validation job
-jobs:
+variables:
+- name: SHOW_XCODE_LOG
+  value: true
+
+stages:
+- stage: Unit_Tests
+  jobs:
+  - template: ./templates/node-build-template.yml
+- stage: Integration_Tests
+  jobs:
   - template: ./templates/xcuitest-e2e-template.yml
     parameters:
-      name: iPhoneX_13
-      iosVersion: 13.0
-      xcodeVersion: 11
+      name: iPhoneX_13_7
+      iosVersion: 13.7
+      xcodeVersion: 11.7
       deviceName: "iPhone X"
-      tvosName: AppleTV_13
+      tvosVersion: 13.4
+      tvosName: AppleTV_13_4
       tvosDeviceName: "Apple TV"
+      vmImage: 'macOS-10.15'
